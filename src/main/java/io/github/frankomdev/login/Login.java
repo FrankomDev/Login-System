@@ -3,20 +3,13 @@ import com.google.gson.*;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
-import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
-import net.fabricmc.fabric.api.networking.v1.EntityTrackingEvents;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.math.GlobalPos;
 
 import java.io.*;
-import java.util.Optional;
 
 public class Login implements DedicatedServerModInitializer{
 
@@ -106,6 +99,33 @@ public class Login implements DedicatedServerModInitializer{
         }
     }
 
+    public LangFile read_lang_file() {
+        Gson gson = new Gson();
+        try (FileReader fileReader = new FileReader("config/login/lang.json")) {
+            return gson.fromJson(fileReader, LangFile.class);
+        } catch (IOException e) {
+            System.out.println(e);
+        }
+        return null;
+    }
+
+    public LangFile create_lang_file(){
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        String already_registered = "§4You are already registered! Use /login";
+        String rejoin = "§1Registered! Please rejoin";
+        String logged_in = "§9Logged in";
+        String wrong_password = "§4Wrong password!";
+        String login_hint = "§aPlease log in (/login <password>)";
+        String register_hint = "§aPlease register (/register <password>)";
+        LangFile langFile = new LangFile(already_registered, rejoin, logged_in, wrong_password, login_hint, register_hint);
+        try (FileWriter writer = new FileWriter("config/login/lang.json")){
+            gson.toJson(langFile, writer);
+        }catch (IOException e){
+            System.out.println(e);
+        }
+        return read_lang_file();
+    }
+
     @Override
     public void onInitializeServer(){
         File config_dir = new File("config/login");
@@ -116,17 +136,25 @@ public class Login implements DedicatedServerModInitializer{
                 //create_config();
             }
         }
+        LangFile langFile;
+        File lang = new File("config/login/lang.json");
+        if (lang.exists()) {
+            langFile = read_lang_file();
+        }else {
+            langFile = create_lang_file();
+        }
+
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->{
             dispatcher.register(CommandManager.literal("register").then(CommandManager.argument("password", StringArgumentType.string())
                     .executes(context->{
                         //context.getSource().sendFeedback(()->Text.literal("Called command"), false);
                         if (check_user(context.getSource().getPlayer().getName().getString())){
-                            context.getSource().getPlayer().sendMessage(Text.of("§4Już jesteś zarejestrowany! Użyj /login"));
+                            context.getSource().getPlayer().sendMessage(Text.of(langFile.already_registered));
                         }else {
                             String password = StringArgumentType.getString(context, "password");
                             register_user(context.getSource().getPlayer().getName().getString(), password);
-                            context.getSource().getPlayer().networkHandler.disconnect(Text.of("§1Zarejestrowano! Wejdź ponownie"));
+                            context.getSource().getPlayer().networkHandler.disconnect(Text.of(langFile.rejoin));
                         }
                         return  1;
                     })));
@@ -137,12 +165,12 @@ public class Login implements DedicatedServerModInitializer{
                     .executes(context->{
                         String password = StringArgumentType.getString(context, "password");
                         if (check_password(context.getSource().getPlayer().getName().getString(), password)){
-                            context.getSource().getPlayer().sendMessage(Text.of("§9Zalogowano"));
+                            context.getSource().getPlayer().sendMessage(Text.of(langFile.logged_in));
                             context.getSource().getPlayer().removeStatusEffect(StatusEffects.SLOWNESS);
                             context.getSource().getPlayer().removeStatusEffect(StatusEffects.BLINDNESS);
                             context.getSource().getPlayer().removeStatusEffect(StatusEffects.MINING_FATIGUE);
                         } else{
-                            context.getSource().getPlayer().networkHandler.disconnect(Text.of("§4Złe hasło!"));
+                            context.getSource().getPlayer().networkHandler.disconnect(Text.of(langFile.wrong_password));
                         }
                         return  1;
                     })));
@@ -156,9 +184,9 @@ public class Login implements DedicatedServerModInitializer{
             player.addStatusEffect(blindness);
             player.addStatusEffect(mining_fatigue);
             if (check_user(player.getName().getString())) {
-                player.sendMessage(Text.of("Zaloguj sie (/login <haslo>)"));
+                player.sendMessage(Text.of(langFile.login_hint));
             } else {
-                player.sendMessage(Text.of("Zarejestruj sie (/register <haslo>)"));
+                player.sendMessage(Text.of(langFile.register_hint));
             }
         });
 
