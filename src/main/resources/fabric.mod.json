@@ -1,0 +1,31 @@
+{
+	"schemaVersion": 1,
+	"id": "login",
+	"version": "${version}",
+	"name": "Login",
+	"description": "Mod about user login system and shit like that",
+	"authors": [
+		"frankom"
+	],
+	"contact": {
+		"homepage": "https://github.com/FrankomDev/Login-System",
+		"sources": "https://github.com/FrankomDev/Login-System"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/login/icon.png",
+	"environment": "server",
+	"entrypoints": {
+		"server": [
+			"io.github.frankomdev.login.Login"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.17.2",
+		"minecraft": "~1.21.10",
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}
