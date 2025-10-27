@@ -1,9 +1,9 @@
 {
 	"schemaVersion": 1,
-	"id": "login",
+	"id": "fabricauth",
 	"version": "${version}",
-	"name": "Login",
-	"description": "Mod about user login system and shit like that",
+	"name": "FabricAuth",
+	"description": "user login system mod",
 	"authors": [
 		"frankom"
 	],
@@ -11,12 +11,12 @@
 		"homepage": "https://github.com/FrankomDev/Login-System",
 		"sources": "https://github.com/FrankomDev/Login-System"
 	},
-	"license": "CC0-1.0",
+	"license": "GPL-3.0-or-later",
 	"icon": "assets/login/icon.png",
 	"environment": "server",
 	"entrypoints": {
 		"server": [
-			"io.github.frankomdev.login.Login"
+          "top.frankom.login.Login"
 		]
 	},
 	"depends": {

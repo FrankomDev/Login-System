@@ -1,4 +1,4 @@
-package io.github.frankomdev.login;
+package top.frankom.login;
 
 public class LangFile {
 

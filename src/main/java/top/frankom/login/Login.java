@@ -1,4 +1,4 @@
-package io.github.frankomdev.login;
+package top.frankom.login;
 import com.google.gson.*;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.api.DedicatedServerModInitializer;
@@ -37,7 +37,7 @@ public class Login implements DedicatedServerModInitializer{
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         UserConfig user = new UserConfig(nick, password);
         try {
-            FileWriter fileWriter = new FileWriter("config/login/logins.json");
+            FileWriter fileWriter = new FileWriter("config/auth/logins.json");
             gson.toJson(user, fileWriter);
             fileWriter.flush();
         } catch (IOException e){
@@ -46,26 +46,26 @@ public class Login implements DedicatedServerModInitializer{
     }
 
     public void register_user(String nick, String password){
-        File file = new File("config/login/logins.json");
+        File file = new File("config/auth/logins.json");
         password = hash_string(password);
         if (!file.exists()){
             create_file(nick, password);
         } else{
             Gson gson = new GsonBuilder().setPrettyPrinting().create();
             try {
-                Reader reader = new FileReader("config/login/logins.json");
+                Reader reader = new FileReader("config/auth/logins.json");
                 JsonElement json = JsonParser.parseReader(reader);
                 if (json.isJsonArray()){
                     JsonElement new_user = JsonParser.parseString("{\"username\":"+nick+",\"password\":\""+password+"\"}");
                     json.getAsJsonArray().add(new_user);
-                    FileWriter fileWriter = new FileWriter("config/login/logins.json");
+                    FileWriter fileWriter = new FileWriter("config/auth/logins.json");
                     gson.toJson(json, fileWriter);
                     fileWriter.flush();
                 } else{
                     UserConfig new_user = new UserConfig(nick, password);
                     UserConfig old_user = gson.fromJson(json, UserConfig.class);
                     UserConfig[] users = {old_user, new_user};
-                    FileWriter fileWriter = new FileWriter("config/login/logins.json");
+                    FileWriter fileWriter = new FileWriter("config/auth/logins.json");
                     gson.toJson(users, fileWriter);
                     fileWriter.flush();
                 }
@@ -78,7 +78,7 @@ public class Login implements DedicatedServerModInitializer{
 
     public boolean check_user(String nick){
         Gson gson = new Gson();
-        try (Reader reader = new FileReader("config/login/logins.json")){
+        try (Reader reader = new FileReader("config/auth/logins.json")){
             JsonElement json = JsonParser.parseReader(reader);
             if (json.isJsonArray()) {
                 UserConfig[] users = gson.fromJson(json, UserConfig[].class);
@@ -101,7 +101,7 @@ public class Login implements DedicatedServerModInitializer{
     public boolean check_password(String nick, String password){
         Gson gson = new Gson();
         password = hash_string(password);
-        try (Reader reader = new FileReader("config/login/logins.json")){
+        try (Reader reader = new FileReader("config/auth/logins.json")){
             JsonElement json = JsonParser.parseReader(reader);
             if (json.isJsonArray()) {
                 UserConfig[] users = gson.fromJson(json, UserConfig[].class);
@@ -123,7 +123,7 @@ public class Login implements DedicatedServerModInitializer{
 
     public LangFile read_lang_file() {
         Gson gson = new Gson();
-        try (FileReader fileReader = new FileReader("config/login/lang.json")) {
+        try (FileReader fileReader = new FileReader("config/auth/lang.json")) {
             return gson.fromJson(fileReader, LangFile.class);
         } catch (IOException e) {
             System.out.println(e);
@@ -141,7 +141,7 @@ public class Login implements DedicatedServerModInitializer{
         String register_hint = "§aPlease register (/register <password> <confirm_password>)";
         String passwords_mismatch = "§cPasswords aren't the same!";
         LangFile langFile = new LangFile(already_registered, rejoin, logged_in, wrong_password, login_hint, register_hint, passwords_mismatch);
-        try (FileWriter writer = new FileWriter("config/login/lang.json")){
+        try (FileWriter writer = new FileWriter("config/auth/lang.json")){
             gson.toJson(langFile, writer);
         }catch (IOException e){
             System.out.println(e);
@@ -151,7 +151,7 @@ public class Login implements DedicatedServerModInitializer{
 
     @Override
     public void onInitializeServer(){
-        File config_dir = new File("config/login");
+        File config_dir = new File("config/auth");
         if (!config_dir.exists()){
             boolean creating_dir = config_dir.mkdirs();
             if (creating_dir){
@@ -160,7 +160,7 @@ public class Login implements DedicatedServerModInitializer{
             }
         }
         LangFile langFile;
-        File lang = new File("config/login/lang.json");
+        File lang = new File("config/auth/lang.json");
         if (lang.exists()) {
             langFile = read_lang_file();
         }else {
