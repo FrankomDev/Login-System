@@ -10,8 +10,28 @@ import net.minecraft.server.command.CommandManager;
 import net.minecraft.text.Text;
 
 import java.io.*;
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 public class Login implements DedicatedServerModInitializer{
+
+    public String hash_string(String word) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(word.getBytes(StandardCharsets.UTF_8));
+            BigInteger number = new BigInteger(1, hash);
+            StringBuilder hex = new StringBuilder(number.toString(16));
+            while (hex.length()<64){
+                hex.insert(0, '0');
+            }
+            return hex.toString();
+        } catch (NoSuchAlgorithmException e){
+            System.out.println(e);
+        }
+        return null;
+    }
 
     public void create_file(String nick, String password) {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
@@ -27,6 +47,7 @@ public class Login implements DedicatedServerModInitializer{
 
     public void register_user(String nick, String password){
         File file = new File("config/login/logins.json");
+        password = hash_string(password);
         if (!file.exists()){
             create_file(nick, password);
         } else{
@@ -79,6 +100,7 @@ public class Login implements DedicatedServerModInitializer{
 
     public boolean check_password(String nick, String password){
         Gson gson = new Gson();
+        password = hash_string(password);
         try (Reader reader = new FileReader("config/login/logins.json")){
             JsonElement json = JsonParser.parseReader(reader);
             if (json.isJsonArray()) {
@@ -116,8 +138,9 @@ public class Login implements DedicatedServerModInitializer{
         String logged_in = "§9Logged in";
         String wrong_password = "§4Wrong password!";
         String login_hint = "§aPlease log in (/login <password>)";
-        String register_hint = "§aPlease register (/register <password>)";
-        LangFile langFile = new LangFile(already_registered, rejoin, logged_in, wrong_password, login_hint, register_hint);
+        String register_hint = "§aPlease register (/register <password> <confirm_password>)";
+        String passwords_mismatch = "§cPasswords aren't the same!";
+        LangFile langFile = new LangFile(already_registered, rejoin, logged_in, wrong_password, login_hint, register_hint, passwords_mismatch);
         try (FileWriter writer = new FileWriter("config/login/lang.json")){
             gson.toJson(langFile, writer);
         }catch (IOException e){
@@ -146,18 +169,24 @@ public class Login implements DedicatedServerModInitializer{
 
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->{
-            dispatcher.register(CommandManager.literal("register").then(CommandManager.argument("password", StringArgumentType.string())
-                    .executes(context->{
-                        //context.getSource().sendFeedback(()->Text.literal("Called command"), false);
-                        if (check_user(context.getSource().getPlayer().getName().getString())){
-                            context.getSource().getPlayer().sendMessage(Text.of(langFile.already_registered));
-                        }else {
-                            String password = StringArgumentType.getString(context, "password");
-                            register_user(context.getSource().getPlayer().getName().getString(), password);
-                            context.getSource().getPlayer().networkHandler.disconnect(Text.of(langFile.rejoin));
-                        }
-                        return  1;
-                    })));
+            dispatcher.register(CommandManager.literal("register")
+                    .then(CommandManager.argument("password", StringArgumentType.string())
+                    .then(CommandManager.argument("confirm_password", StringArgumentType.string())
+                            .executes(context->{
+                            if (check_user(context.getSource().getPlayer().getName().getString())){
+                                context.getSource().getPlayer().sendMessage(Text.of(langFile.already_registered));
+                            }else {
+                                String password = StringArgumentType.getString(context, "password");
+                                String password2 = StringArgumentType.getString(context, "confirm_password");
+                                if (password.equals(password2)) {
+                                    register_user(context.getSource().getPlayer().getName().getString(), password);
+                                    context.getSource().getPlayer().networkHandler.disconnect(Text.of(langFile.rejoin));
+                                }else {
+                                    context.getSource().getPlayer().sendMessage(Text.of(langFile.passwords_mismatch));
+                                }
+                            }
+                            return  1;
+                    }))));
         });
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->{
